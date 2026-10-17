@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nonconvex_regression"
+version = "0.1.0"
+description = "A package for the use of non-convex norms for outlier robust linear regression."
+readme = "README.md"
+requires-python = ">=3.10"
+
+dependencies = [
+    "numpy",
+    "scipy",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+select = [
+    "E",    # Style errors
+    "F",    # Common errors
+    "I",    # Import sorting
+    "ANN",  # Missing type annotations
+    "D",    # Docstring conventions
+    "UP",    # pyupgrade: modernize syntax
+    "B",     # flake8-bugbear: common bug patterns
+    "W",     # pycodestyle warnings
+]
+ignore = [
+    "D100", # Missing module docstring
+    "D104", # Missing package docstring
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.mypy]
+check_untyped_defs = true
+disallow_untyped_defs = true
+
+[tool.setuptools.package-data]
+nonconvex_regression = ["py.typed"]

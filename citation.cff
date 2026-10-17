@@ -1,0 +1,14 @@
+cff-version: 1.2.0
+title: nonconvex_regression
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Pablo
+    family-names: Ortiz Badenes
+repository-code: 'https://github.com/Pablo-RTZ/nonconvex_regression'
+abstract: >-
+  A repository on the use of non-convex norms to make outlier robust
+  linear regression.
+license: GPL-3.0-or-later

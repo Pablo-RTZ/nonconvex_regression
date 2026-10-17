@@ -1,0 +1,6 @@
+# Core package dependencies (also declared in pyproject.toml)
+numpy
+scipy
+
+# Dependencies used by the example notebooks
+matplotlib
