@@ -5,8 +5,8 @@ def clean_data(
     n: int,
     beta: np.ndarray,
     epsilon: float,
-    min: np.ndarray,
-    max: np.ndarray,
+    min: float | np.ndarray,
+    max: float | np.ndarray,
     seed: int = 42,
 ) -> np.ndarray:
     """Generate clean linear-regression data with Gaussian noise.
@@ -66,8 +66,8 @@ def outlier_data(
     n: int,
     beta: np.ndarray,
     epsilon: float,
-    min: np.ndarray,
-    max: np.ndarray,
+    min: float | np.ndarray,
+    max: float | np.ndarray,
     p: float,
     A: float,
     seed: int = 42,

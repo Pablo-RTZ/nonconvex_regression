@@ -1,4 +1,45 @@
+from typing import Literal, overload
+
 import numpy as np
+
+
+@overload
+def lp_irls(
+    X: np.ndarray,
+    y: np.ndarray,
+    lp: float,
+    eps: float,
+    initial_coefficients: np.ndarray | None = None,
+    maxiter: int = 1000,
+    tolerance: float = 1e-6,
+    return_iterations: Literal[False] = False,
+) -> np.ndarray: ...
+
+
+@overload
+def lp_irls(
+    X: np.ndarray,
+    y: np.ndarray,
+    lp: float,
+    eps: float,
+    initial_coefficients: np.ndarray | None = None,
+    maxiter: int = 1000,
+    tolerance: float = 1e-6,
+    return_iterations: Literal[True] = True,
+) -> tuple[np.ndarray, int]: ...
+
+
+@overload
+def lp_irls(
+    X: np.ndarray,
+    y: np.ndarray,
+    lp: float,
+    eps: float,
+    initial_coefficients: np.ndarray | None = None,
+    maxiter: int = 1000,
+    tolerance: float = 1e-6,
+    return_iterations: bool = False,
+) -> np.ndarray | tuple[np.ndarray, int]: ...
 
 
 def lp_irls(

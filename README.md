@@ -40,6 +40,28 @@ Jupyter notebooks, ordered as a suggested walkthrough:
    exponent affects the results.
 5. [`05_lp_optimization.ipynb`](Examples/05_lp_optimization.ipynb) — examines
    the effect of smoothing on test error and IRLS iteration counts.
+6. [`06_parameter_tuning.ipynb`](Examples/06_parameter_tuning.ipynb) — sets up
+   repeated-seed parameter tuning for three contamination scenarios.
+
+in order to simplify the code in the notebooks, the parameter tuning and its plots are defined in a `.py` file in the Experiments folder instead of the notebooks. Thus, the quadtree parameter search can also be run from the repository root after installing the package:
+
+```bash
+python Experiments/parameter_tuning.py
+```
+
+The program searches each contamination scenario separately over `lp` in `[0.4, 0.9]` and `eps` in `[1e-6, 1e-1]`, using the mean coefficient recovery error over a fixed number of seeded experiments (20 by default). It refines the best quadrant for a determined amount of rounds (5 by default) and writes per-candidate, per-experiment errors to `results/parameter_tuning.csv`. Use `--experiments`, `--rounds`, `--seed`, and `--output` to change those run settings.
+
+Similarly, the plots from a tuning CSV can be generated and displayed with:
+
+```bash
+python Experiments/plot_parameter_tuning.py results/parameter_tuning.csv
+```
+
+The notebook displays a quadtree candidate/cell plot, best recovery error by
+round, and the best `lp`/`eps` path by round inline. The quadtree cell
+boundaries are reconstructed from the initial search bounds, which default to
+the values used by the tuning program; pass `--lp-min`, `--lp-max`, `--eps-min`,
+and `--eps-max` if a run used different bounds.
 
 ## License
 

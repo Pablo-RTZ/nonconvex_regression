@@ -47,5 +47,9 @@ convention = "google"
 check_untyped_defs = true
 disallow_untyped_defs = true
 
+[[tool.mypy.overrides]]
+module = ["scipy.*"]
+ignore_missing_imports = true
+
 [tool.setuptools.package-data]
 nonconvex_regression = ["py.typed"]
