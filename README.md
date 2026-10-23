@@ -42,6 +42,8 @@ Jupyter notebooks, ordered as a suggested walkthrough:
    the effect of smoothing on test error and IRLS iteration counts.
 6. [`06_parameter_tuning.ipynb`](Examples/06_parameter_tuning.ipynb) — sets up
    repeated-seed parameter tuning for three contamination scenarios.
+7. [`07_tolerance_tuning.ipynb`](Examples/07_tolerance_tuning.ipynb) — compares
+   solver tolerances using the best `lp` and `eps` values from notebook 06.
 
 in order to simplify the code in the notebooks, the parameter tuning and its plots are defined in a `.py` file in the Experiments folder instead of the notebooks. Thus, the quadtree parameter search can also be run from the repository root after installing the package:
 
@@ -62,6 +64,31 @@ round, and the best `lp`/`eps` path by round inline. The quadtree cell
 boundaries are reconstructed from the initial search bounds, which default to
 the values used by the tuning program; pass `--lp-min`, `--lp-max`, `--eps-min`,
 and `--eps-max` if a run used different bounds.
+
+Notebook 07's experiment and plotting code are also separate programs. Run the
+experiment from the repository root with:
+
+```bash
+python Experiments/tolerance_tuning.py
+```
+
+It reads each scenario's best `lp` and `eps` from
+`results/parameter_tuning.csv`, evaluates 31 solver tolerances (by default) logarithmically
+spaced from `1e-10` to `1e-1` on the same 50 (by default) seeded data sets, and writes
+per-fit recovery error, solver time, iteration count, and marginal improvement
+metrics to `results/tolerance_tuning.csv`. Marginal recovery improvement is
+the relative error reduction from a looser to the adjacent tighter tolerance,
+divided by the interval in `log10(tolerance)`. It is shown as a percentage;
+the time-adjusted value divides that relative improvement by the added mean
+solver time and is shown as a percentage per second. The elbow is estimated as the point
+of maximum distance from the normalized recovery-error curve to its endpoint
+chord. Tolerance bounds, grid size, experiment count, seed, parameter CSV, and
+output path can be changed with the corresponding CLI options. Plot the saved
+experiment independently with:
+
+```bash
+python Experiments/plot_tolerance_tuning.py results/tolerance_tuning.csv
+```
 
 ## License
 

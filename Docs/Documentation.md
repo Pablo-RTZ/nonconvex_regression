@@ -126,3 +126,74 @@ Here it can also be noted how the average behavior is bounded by the noise stand
 Taken together, these experiments provide an initial comparison of OLS, LAD, and smoothed $L_p$-IRLS when some responses are contaminated. Prediction error, coefficient recovery, and computation are considered separately because each describes a different aspect of the fit. In the timing run, OLS was fastest, LAD was slowest, and $L_p$-IRLS fell between them.
 
 The current results are not sufficient to conclude that $L_p$-IRLS generally outperforms OLS or LAD. In order to achieve so, some optimal values for the parameters will be found, in order to run Monte-Carlo simulations on the models.
+
+## Parameter tuning experiment
+
+To choose the $L_p$ exponent and smoothing parameter before making broader comparisons, a repeated-seed search is run separately for three contamination scenarios: low (outlier proportion $0.02$, magnitude $0.1$), medium ($0.1$, $0.5$), and high ($0.25$, $5$). Each generated dataset has 1,000 observations, true coefficients $\beta=(1,1)$, feature values in $[-2,2]$, and Gaussian noise with standard deviation $0.01$. The experiment uses 50 seeds, from 42 to 91, for each scenario.
+
+The search starts with $l_p$ in $[0.4,0.9]$ and $\epsilon$ in $[10^{-6},10^{-1}]$ and applies a quadtree algorith,. In each of 10 rounds, it evaluates the centers of four subregions, then keeps the quadrant containing the candidate with the lowest mean coefficient recovery error. The $\epsilon$ range is divided in log space to account for its multiple orders of magnitude. For each candidate, the score is
+
+$$
+\bar{e}(l_p,\epsilon)
+= \frac{1}{50}\sum_{m=1}^{50}
+\left\|\hat{\beta}^{(m)}_{l_p,\epsilon}-\beta\right\|_2,
+$$
+
+where the same 50 datasets are used for every candidate within a scenario. This makes the candidate scores directly comparable on the sampled data. Across the three scenarios, the 10 rounds evaluate 3 × 10 × 4 × 50 = 6,000 fits.
+
+The best candidates encountered during the search differ by scenario:
+
+| Contamination | Selected $l_p$ | Selected $\epsilon$ | Mean coefficient recovery error |
+| --- | ---: | ---: | ---: |
+| Low | 0.7127 | 0.01215 | 0.000379 |
+| Medium | 0.6505 | 0.01142 | 0.000406 |
+| High | 0.4627 | 0.02015 | 0.000417 |
+
+The selected exponent decreases as contamination becomes more severe in these scenarios, while the smoothing values remain in a relatively narrow range. These results motivate scenario-specific parameter choices rather than assuming one pair is best for every setting.
+
+The figures below show the evaluated candidates and selected search regions, how the best mean recovery error changes by round, and the path of the best parameter values.
+
+![Quadtree parameter search by contamination scenario](../Assets/parameter_tuning_quadtree.png)
+
+![Best mean coefficient recovery error by search round](../Assets/parameter_tuning_error_by_round.png)
+
+![Best $l_p$ and $\epsilon$ values by search round](../Assets/parameter_tuning_parameter_path.png)
+
+This tuning is a bounded search heuristic, not a guarantee of a global optimum. Its scores measure coefficient recovery on these fixed synthetic datasets; they do not establish performance on new data or show that $L_p$-IRLS is better than OLS. The chosen values will therefore be treated as candidates for subsequent Monte Carlo comparisons, with the search range and contamination scenarios kept in mind.
+
+## Solver tolerance experiment
+
+With the scenario-specific $l_p$ and $\epsilon$ values selected, the next experiment examines how the IRLS stopping tolerance affects coefficient recovery and computation time. It uses the same three contamination scenarios and data-generation settings as the parameter-tuning experiment. For each scenario, 200 datasets are generated from seeds 42 through 241, beginning with the same seed used in parameter tuning. Every dataset is fitted at 31 solver tolerances logarithmically spaced from $10^{-10}$ to $10^{-1}$. The maximum number of IRLS iterations is 200.
+
+The solver tolerance controls the relative change in the smoothed objective required to stop an IRLS fit. The coefficient recovery error is
+
+$$
+e(\tau)=\left\|\hat{\beta}_{\tau}-\beta\right\|_2,
+$$
+
+where $\tau$ is the solver tolerance. The reported elbow is estimated from the mean error curve as the interior tolerance with the greatest normalized distance from the straight line connecting the curve's endpoints. This gives a reproducible summary of the transition in the sampled curve, but does not establish a universal or statistically optimal tolerance.
+
+For the marginal comparisons, the relative error reduction between adjacent tolerances is calculated as
+
+$$
+g(\tau)=\frac{\bar e(\tau_{\mathrm{loose}})-\bar e(\tau)}
+{\bar e(\tau_{\mathrm{loose}})},
+$$
+
+where $\tau$ is the tighter of the pair. The second plot reports this reduction per step in $\log_{10}(\tau)$ as a percentage; the third divides it by the additional mean solver time and reports a percentage per second. The red dashed vertical lines indicate the tolerance at which the plotted marginal improvement is largest. Computation-time comparisons are sensitive to the machine and run conditions, especially for these short individual fits.
+
+The results at the estimated error elbows are:
+
+| Contamination | $l_p$ | $\epsilon$ | Error elbow tolerance | Mean coefficient recovery error at elbow | Mean solver time per fit at elbow (s) |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Low ($p=0.02$, $A=0.1$) | 0.7127 | 0.01215 | $2.51\times10^{-5}$ | 0.000386 | 0.000289 |
+| Medium ($p=0.1$, $A=0.5$) | 0.6505 | 0.01142 | $1.58\times10^{-3}$ | 0.000526 | 0.000302 |
+| High ($p=0.25$, $A=5$) | 0.4627 | 0.02015 | $3.98\times10^{-4}$ | 0.000468 | 0.000369 |
+
+The elbow varies between contamination scenarios, so the results do not support one solver tolerance for all three settings. The adjacent-tolerance marginal plots also show that the largest relative gain can occur at a different tolerance from the error-curve elbow. These are results for the specified synthetic data and finite tolerance grid; they should be interpreted as a practical tuning guide rather than a guarantee of convergence or generalization.
+
+![Coefficient recovery error versus solver tolerance](../Assets/tolerance_tuning_recovery.png)
+
+![Relative recovery improvement per log-tolerance step](../Assets/tolerance_tuning_marginal_improvement.png)
+
+![Relative recovery improvement per additional solver second](../Assets/tolerance_tuning_time_adjusted_improvement.png)
