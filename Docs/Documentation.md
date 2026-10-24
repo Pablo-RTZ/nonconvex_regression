@@ -11,7 +11,7 @@ Initially, the experiments use one feature and one seeded dataset for each conta
 Ordinary Least Squares (OLS) regression works by finding the coefficients that minimize quadratic error among the data. Thus, let $y\in \mathbb{R}^n$ be a vector of outcomes given by a $X\in\mathbb{R}^{n\times p}$ design matrix, the regression coefficients will be
 
 $$
-\hat{\beta}_{\mathrm{OLS}}=\argmin_{\beta\in\mathbb{R}^p}\|y-X\beta^T\|_2^2
+\hat{\beta}_{\mathrm{OLS}}=\textrm{argmin}_{\beta\in\mathbb{R}^p}\|y-X\beta^T\|_2^2
 $$
 
 where $\|\cdot\|_2$ denotes the euclidean norm. However, if the data contains outliers, they will have a big impact on the function, heavily skewning the result. Thus, other norms can be explored to try and reduce the impact big residuals will have.
@@ -20,14 +20,14 @@ Least Absolute Deviations (LAD), also called $L_1$ regression, uses the sum of a
 
 $$
 \hat{\beta}_{\mathrm{LAD}}
-=\argmin_{\beta\in\mathbb{R}^{d+1}}\sum_{i=1}^{n}|r_i|.
+=\textrm{argmin}_{\beta\in\mathbb{R}^{d+1}}\sum_{i=1}^{n}|r_i|.
 $$
 
 More generally, $L_p$ regression replaces absolute residuals with their $p$th powers. For $0<p<1$, the theoretical objective is
 
 $$
 \hat{\beta}_{p}
-=\argmin_{\beta\in\mathbb{R}^{d+1}}\sum_{i=1}^{n}|r_i|^p.
+=\textrm{argmin}_{\beta\in\mathbb{R}^{d+1}}\sum_{i=1}^{n}|r_i|^p.
 $$
 
 Unlike squared or absolute error, $|r_i|^p$ grows sublinearly for large residuals, so an outlying response contributes less relative to a well-fitted observation. The price is that this objective is non-convex: a theoretical solution would minimize the stated objective over the coefficients, but finding its global minimum is generally harder and optimization can be sensitive to initialization. This formulation describes the target criterion; the numerical method used to approximate a fit is described below.

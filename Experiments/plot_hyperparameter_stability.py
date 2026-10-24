@@ -58,9 +58,9 @@ def _read_summaries(
                 },
             )["errors"].append(rmse)
 
-    summaries: dict[
-        str, dict[tuple[str, float, float], tuple[float, float, int]]
-    ] = defaultdict(dict)
+    summaries: dict[str, dict[tuple[str, float, float], tuple[float, float, int]]] = (
+        defaultdict(dict)
+    )
     for (scenario, method, proportion, magnitude), entry in grouped.items():
         errors = np.asarray(entry["errors"], dtype=float)
         standard_error = (
