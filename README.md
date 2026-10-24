@@ -44,6 +44,9 @@ Jupyter notebooks, ordered as a suggested walkthrough:
    repeated-seed parameter tuning for three contamination scenarios.
 7. [`07_tolerance_tuning.ipynb`](Examples/07_tolerance_tuning.ipynb) — compares
    solver tolerances using the best `lp` and `eps` values from notebook 06.
+8. [`08_hyperparameter_stability.ipynb`](Examples/08_hyperparameter_stability.ipynb)
+   — evaluates each scenario's frozen `lp`, `eps`, and tolerance on nearby
+   contamination conditions.
 
 in order to simplify the code in the notebooks, the parameter tuning and its plots are defined in a `.py` file in the Experiments folder instead of the notebooks. Thus, the quadtree parameter search can also be run from the repository root after installing the package:
 
@@ -89,6 +92,28 @@ experiment independently with:
 ```bash
 python Experiments/plot_tolerance_tuning.py results/tolerance_tuning.csv
 ```
+
+The hyperparameter-stability experiment reuses the selected `lp`, `eps`, and
+error-elbow tolerance from `results/tolerance_tuning.csv`. For each of the
+three anchor scenarios, it tests a local grid using contamination fractions
+at the anchor and at ±10% of the anchor proportion, and outlier magnitudes at
+0.8, 1.0, and 1.2 times
+the anchor magnitude. Each target condition is repeated 1,000 times by
+default, with a separate clean test set for every repetition. It compares the
+frozen $L_p$ fit against OLS and records clean-test RMSE, coefficient recovery,
+fit time, and IRLS iterations:
+
+```bash
+python Experiments/hyperparameter_stability.py
+python Experiments/plot_hyperparameter_stability.py results/hyperparameter_stability.csv
+```
+
+Use `--experiments`, `--proportion-shift-fraction`, `--magnitude-multipliers`,
+`--n-train`, `--n-test`, `--seed`, `--parameters`, and `--output` to adjust
+the run. Clean-test prediction error is reported as RMSE, consistently with
+the preceding experiment notebooks. The plotting script shows RMSE heatmaps
+for both methods, the Lp-minus-OLS RMSE difference, and RMSE trends with
+standard errors across contamination fractions.
 
 ## License
 

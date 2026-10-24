@@ -91,8 +91,7 @@ def read_best_parameters(
         missing = required_columns - set(reader.fieldnames or ())
         if missing:
             raise ValueError(
-                f"{csv_path} is missing required columns: "
-                f"{', '.join(sorted(missing))}"
+                f"{csv_path} is missing required columns: {', '.join(sorted(missing))}"
             )
         best_rows: dict[str, set[tuple[float, float, float, float]]] = {}
         for row in reader:

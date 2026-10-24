@@ -6,6 +6,7 @@ import argparse
 import csv
 from collections import defaultdict
 from pathlib import Path
+from typing import TypedDict
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -23,46 +24,70 @@ REQUIRED_COLUMNS = {
 }
 
 
+class _GroupedEntry(TypedDict):
+    """Temporary intermediate data for aggregated tolerance results."""
+
+    errors: list[float]
+    solver_seconds: list[float]
+    lp: float
+    eps: float
+    relative_per_log_tolerance: float
+    relative_per_second: float
+    is_error_elbow: bool
+
+
+def _csv_float(row: dict[str, object], key: str) -> float:
+    """Safely coerce a CSV cell to float, treating blanks as NaN."""
+    value = row.get(key)
+    if value is None:
+        return float("nan")
+    if isinstance(value, str):
+        stripped = value.strip()
+        if not stripped:
+            return float("nan")
+        return float(stripped)
+    if isinstance(value, (int, float)):
+        return float(value)
+    raise TypeError(
+        f"Expected a numeric CSV value for {key!r}, got {type(value).__name__}."
+    )
+
+
 def _read_summaries(csv_path: Path) -> dict[str, list[dict[str, float | bool]]]:
     """Aggregate per-experiment rows into tolerance-level measurements."""
-    grouped: dict[tuple[str, float], dict[str, object]] = {}
+    grouped: dict[tuple[str, float], _GroupedEntry] = {}
     with csv_path.open(newline="", encoding="utf-8") as csv_file:
         reader = csv.DictReader(csv_file)
         missing = REQUIRED_COLUMNS - set(reader.fieldnames or ())
         if missing:
             raise ValueError(
-                f"{csv_path} is missing required columns: "
-                f"{', '.join(sorted(missing))}"
+                f"{csv_path} is missing required columns: {', '.join(sorted(missing))}"
             )
         for row in reader:
-            key = (row["scenario"], float(row["tolerance"]))
+            scenario = str(row.get("scenario") or "")
+            tolerance = _csv_float(row, "tolerance")
+            key = (scenario, tolerance)
             entry = grouped.setdefault(
                 key,
                 {
                     "errors": [],
                     "solver_seconds": [],
-                    "lp": float(row["lp"]),
-                    "eps": float(row["eps"]),
-                    "relative_per_log_tolerance": (
-                        float(row["relative_improvement_per_log10_tolerance"])
-                        if row["relative_improvement_per_log10_tolerance"]
-                        else np.nan
+                    "lp": _csv_float(row, "lp"),
+                    "eps": _csv_float(row, "eps"),
+                    "relative_per_log_tolerance": _csv_float(
+                        row, "relative_improvement_per_log10_tolerance"
                     ),
-                    "relative_per_second": (
-                        float(row["relative_improvement_per_added_second"])
-                        if row["relative_improvement_per_added_second"]
-                        else np.nan
+                    "relative_per_second": _csv_float(
+                        row, "relative_improvement_per_added_second"
                     ),
-                    "is_error_elbow": row["is_error_elbow"].strip().lower()
+                    "is_error_elbow": str(row.get("is_error_elbow") or "")
+                    .strip()
+                    .lower()
                     == "true",
                 },
             )
-            errors = entry["errors"]
-            solver_seconds = entry["solver_seconds"]
-            if not isinstance(errors, list) or not isinstance(solver_seconds, list):
-                raise TypeError("Invalid internal tolerance aggregation state.")
-            errors.append(float(row["coefficient_recovery_error"]))
-            solver_seconds.append(float(row["solver_seconds"]))
+            entry["errors"].append(_csv_float(row, "coefficient_recovery_error"))
+            entry["solver_seconds"].append(_csv_float(row, "solver_seconds"))
 
     summaries: dict[str, list[dict[str, float | bool]]] = defaultdict(list)
     for (scenario, tolerance), entry in grouped.items():
@@ -93,9 +118,7 @@ def _read_summaries(csv_path: Path) -> dict[str, list[dict[str, float | bool]]]:
     for scenario, evaluations in summaries.items():
         evaluations.sort(key=lambda item: float(item["tolerance"]))
         if len(evaluations) < 3:
-            raise ValueError(
-                f"{scenario} has fewer than three tolerance measurements."
-            )
+            raise ValueError(f"{scenario} has fewer than three tolerance measurements.")
     return dict(summaries)
 
 
@@ -118,9 +141,7 @@ def _make_figures(
         evaluations = summaries[scenario]
         tolerances = np.asarray([item["tolerance"] for item in evaluations])
         errors = np.asarray([item["mean_error"] for item in evaluations])
-        standard_errors = np.asarray(
-            [item["standard_error"] for item in evaluations]
-        )
+        standard_errors = np.asarray([item["standard_error"] for item in evaluations])
         axis.errorbar(
             tolerances,
             errors,
@@ -132,9 +153,7 @@ def _make_figures(
             color=color,
             label="Mean +/- SE",
         )
-        elbow = next(
-            (item for item in evaluations if item["is_error_elbow"]), None
-        )
+        elbow = next((item for item in evaluations if item["is_error_elbow"]), None)
         if elbow is not None:
             elbow_tolerance = float(elbow["tolerance"])
             axis.axvline(
@@ -165,13 +184,13 @@ def _make_figures(
     )
     for axis, scenario, color in zip(axes[0], scenarios, colors, strict=True):
         evaluations = summaries[scenario]
-        tolerances = [item["tolerance"] for item in evaluations]
-        improvements = [
+        tolerance_values = [item["tolerance"] for item in evaluations]
+        improvement_values = [
             item["relative_per_log_tolerance"] for item in evaluations
         ]
-        improvements_percent = 100.0 * np.asarray(improvements, dtype=float)
+        improvements_percent = 100.0 * np.asarray(improvement_values, dtype=float)
         axis.plot(
-            tolerances,
+            tolerance_values,
             improvements_percent,
             marker="o",
             color=color,
@@ -182,7 +201,7 @@ def _make_figures(
             maximum_index = int(
                 finite_indices[np.argmax(finite_improvements[finite_indices])]
             )
-            maximum_tolerance = tolerances[maximum_index]
+            maximum_tolerance = tolerance_values[maximum_index]
             axis.axvline(
                 maximum_tolerance,
                 color="red",

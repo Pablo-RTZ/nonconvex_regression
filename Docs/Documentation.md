@@ -197,3 +197,53 @@ The elbow varies between contamination scenarios, so the results do not support 
 ![Relative recovery improvement per log-tolerance step](../Assets/tolerance_tuning_marginal_improvement.png)
 
 ![Relative recovery improvement per additional solver second](../Assets/tolerance_tuning_time_adjusted_improvement.png)
+
+The elbow varies between contamination scenarios, so the results do not support one solver tolerance for all three settings. However, it shows that depending on the factor that wants to be optimized (error, computation time efficiency...), a tolerance that best suits the situation can be found.
+
+## Hyperparameter stability experiment
+
+Once the scenario-specific values for the exponent, smoothing, and stopping tolerance are accepted as practical tuning targets, the next question is whether they remain competitive when the contamination conditions move slightly away from the anchor setting. This experiment freezes the chosen $L_p$ hyperparameters and evaluates them on a local neighborhood of nearby contamination regimes. The purpose is not to prove a universal optimum, but to check how robust the tuned configuration is when the outlier rate or magnitude changes modestly.
+
+For each anchor scenario, the contamination proportion is varied around its selected value by a relative shift of $\pm 10\%$, while the outlier magnitude is tested at $0.8$, $1.0$, and $1.2$ times its anchor scale. Concretely, if the anchor setting is $(c, A)$, the local grid contains
+
+$$
+(c(1-0.1),\, c,\, c(1+0.1)) \times (0.8A,\, A,\, 1.2A).
+$$
+
+Each target condition is repeated 1,000 times with a separate clean test set for every repetition. The same data-generating setup as before is used: 1,000 training observations, 1,000 clean test observations, true coefficients $\beta=(1,1)$, and Gaussian noise with standard deviation $0.01$. The estimate at each condition is compared against OLS fitted to the same training sample, and the recorded metrics are clean-test RMSE, coefficient recovery error, fit time, and IRLS iteration count.
+
+The local comparison is summarized with heatmaps that display the mean RMSE of each method across the proportion-by-magnitude grid, together with the difference $\mathrm{RMSE}_{L_p}-\mathrm{RMSE}_{\mathrm{OLS}}$. This makes it easier to see whether the tuned $L_p$ model keeps its advantage in the neighborhood of the anchor condition, or whether a different setting would be preferable under a nearby contamination pattern. The experiment also reports slopes across contamination proportions for each magnitude level, with standard errors computed across the Monte Carlo repetitions, in order to show the uncertainty of the local performance estimate rather than a single deterministic result.
+
+The key interpretation is practical rather than theoretical. If the frozen hyperparameters continue to win on the surrounding grid, then they are not only tuned to a single point but also stable under small shifts in the contamination setting. If the pattern breaks down quickly, then the tuning results should be viewed as more specific to the exact scenario and less transferable. In that sense, this notebook bridges the gap between scenario-specific tuning and broader robustness claims: the tuned values are evaluated where one would naturally hope they remain useful, without needing to assume that a single set of parameters is best everywhere.
+
+The results across the local contamination neighborhoods are summarized in the plots below. The frozen $L_p$ fit stays essentially tied with OLS in the mild settings and becomes decisively better in the severe one. The average clean-test RMSEs over all nearby conditions are:
+
+| Anchor scenario | $L_p$ mean RMSE | OLS mean RMSE | Median IRLS iterations |
+| --- | ---: | ---: | ---: |
+| Low ($c=0.02$, $A=0.1$) | 0.010015 | 0.010035 | 2 |
+| Medium ($c=0.10$, $A=0.5$) | 0.010026 | 0.012176 | 3 |
+| High ($c=0.25$, $A=5$) | 0.010022 | 0.098683 | 3 |
+
+The iteration counts are especially encouraging: the local runs terminate after only 1 to 4 IRLS steps in every scenario, with medians of 2-3 iterations. In other words, the tuned hyperparameters do not merely preserve robustness under nearby contamination shifts; they do so while keeping the optimization extremely cheap. This makes the notebook's practical message clear: the tuned settings are stable enough to transfer to nearby contamination regimes, and the resulting fits remain computationally lightweight.
+
+![Clean-test RMSE heatmaps across the local contamination neighborhoods](../Assets/hyperparameter_stability_1.png)
+
+![Difference in clean-test RMSE between $L_p$ and OLS across the local neighborhoods](../Assets/hyperparameter_stability_2.png)
+
+![RMSE trends with standard-error bars across contamination proportions](../Assets/hyperparameter_stability_3.png)
+
+The iteration distributions make the computational story even more favorable. For the frozen $L_p$ runs, almost all fits converge in only 1-4 IRLS steps, with scenario medians of 2 or 3 iterations. The distributions are sharply concentrated, which suggests that the tuned hyperparameters are not only stable in predictive quality but also reliable in optimization speed.
+
+![IRLS iteration-count and clean-test RMSE distributions](../Assets/hyperparameter_stability_iterations.png)
+
+## Findings
+
+Taken together, the experiments in this repository show that the smoothed non-convex $L_p$ estimator is a practical robust alternative to OLS when the data contain a moderate or severe amount of vertical contamination, but it is not a universal replacement for every regression problem.
+
+The clean-data checks show that OLS, LAD, and the tuned $L_p$ fit all recover the underlying line well when there are no outliers. Once contamination is introduced, the difference becomes clear: OLS is highly sensitive to extreme responses and can lose the underlying signal even when its in-sample fit looks good, while the robust losses are much more resilient on clean test data. The strongest gains appear in the more severe contamination settings, where the large outlier magnitude and higher outlier fraction make the effect of a least-squares fit especially damaging.
+
+The parameter-tuning and tolerance-tuning results show that the best $L_p$ exponent and smoothing value depend on the contamination setting. The chosen values tend to become smaller as the contamination becomes more severe, which is consistent with a more robust loss, while the smoothing parameter stays in a fairly narrow range. The solver tolerance is also scenario-dependent: the estimated elbow varies across contamination settings, so no single tolerance is ideal for all problems. This indicates that tuning should be treated as a practical, data-aware design choice rather than a fixed universal default.
+
+The local stability experiment is the most important practical result: when the tuned $L_p$ hyperparameters are frozen and evaluated on nearby contamination conditions, they remain competitive over a small neighborhood around the anchor scenarios. In the mild cases, they stay essentially tied with OLS; in the high-contamination case, they are dramatically better. At the same time, the IRLS optimizer is extremely light computationally, with median iteration counts of 2-3 and a maximum of 4 in the tested neighborhoods. This means the method remains both robust and fast when applied near the tuned settings.
+
+Overall, the repository supports a clear practical conclusion: smoothed $L_p$ regression is a strong robust alternative for contaminated linear data, especially when contamination is nontrivial but not extreme enough to invalidate the entire model. OLS remains the baseline for clean data and very mild contamination, while the tuned $L_p$ method gives the best balance of coefficient recovery, prediction error, and computational efficiency in the studied outlier regimes.
