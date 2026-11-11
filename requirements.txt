@@ -4,3 +4,6 @@ scipy
 
 # Dependencies used by the example notebooks
 matplotlib
+
+# Dependency used by the paper's Bayesian-optimization experiment
+scikit-learn

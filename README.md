@@ -26,7 +26,9 @@ immediately. The example notebooks are in [`Examples/`](Examples/).
 
 ## Contents
 
-The repository contains the regression implementation in
+The main goal of the documentation and notebooks is to serve as a chronological
+walkthrough of the exploratory analysis prior to the paper. The repository
+contains the regression implementation in
 [`src/nonconvex_regression/`](src/nonconvex_regression/) and the following
 Jupyter notebooks, ordered as a suggested walkthrough:
 
@@ -48,7 +50,12 @@ Jupyter notebooks, ordered as a suggested walkthrough:
    — evaluates each scenario's frozen `lp`, `eps`, and tolerance on nearby
    contamination conditions.
 
-in order to simplify the code in the notebooks, the parameter tuning and its plots are defined in a `.py` file in the Experiments folder instead of the notebooks. Thus, the quadtree parameter search can also be run from the repository root after installing the package:
+## Experiment execution
+
+in order to simplify the code in the notebooks, the parameter tuning and its
+plots are defined in a `.py` file in the Experiments folder instead of the
+notebooks. Thus, the quadtree parameter search can also be run from the
+repository root after installing the package:
 
 ```bash
 python Experiments/parameter_tuning.py

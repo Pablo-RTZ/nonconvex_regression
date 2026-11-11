@@ -204,10 +204,10 @@ The elbow varies between contamination scenarios, so the results do not support 
 
 Once the scenario-specific values for the exponent, smoothing, and stopping tolerance are accepted as practical tuning targets, the next question is whether they remain competitive when the contamination conditions move slightly away from the anchor setting. This experiment freezes the chosen $L_p$ hyperparameters and evaluates them on a local neighborhood of nearby contamination regimes. The purpose is not to prove a universal optimum, but to check how robust the tuned configuration is when the outlier rate or magnitude changes modestly.
 
-For each anchor scenario, the contamination proportion is varied around its selected value by a relative shift of $\pm 10\%$, while the outlier magnitude is tested at $0.8$, $1.0$, and $1.2$ times its anchor scale. Concretely, if the anchor setting is $(c, A)$, the local grid contains
+For each anchor scenario, the contamination proportion is varied around its selected value by a relative shift of $\pm 10\%$, while the outlier magnitude is tested at $\pm20\%$ times its anchor scale. Concretely, if the anchor setting is $(c, A)$, the local grid contains
 
 $$
-(c(1-0.1),\, c,\, c(1+0.1)) \times (0.8A,\, A,\, 1.2A).
+(0.9c,\, c,\, 1.1c) \times (0.8A,\, A,\, 1.2A).
 $$
 
 Each target condition is repeated 1,000 times with a separate clean test set for every repetition. The same data-generating setup as before is used: 1,000 training observations, 1,000 clean test observations, true coefficients $\beta=(1,1)$, and Gaussian noise with standard deviation $0.01$. The estimate at each condition is compared against OLS fitted to the same training sample, and the recorded metrics are clean-test RMSE, coefficient recovery error, fit time, and IRLS iteration count.
@@ -246,4 +246,4 @@ The parameter-tuning and tolerance-tuning results show that the best $L_p$ expon
 
 The local stability experiment is the most important practical result: when the tuned $L_p$ hyperparameters are frozen and evaluated on nearby contamination conditions, they remain competitive over a small neighborhood around the anchor scenarios. In the mild cases, they stay essentially tied with OLS; in the high-contamination case, they are dramatically better. At the same time, the IRLS optimizer is extremely light computationally, with median iteration counts of 2-3 and a maximum of 4 in the tested neighborhoods. This means the method remains both robust and fast when applied near the tuned settings.
 
-Overall, the repository supports a clear practical conclusion: smoothed $L_p$ regression is a strong robust alternative for contaminated linear data, especially when contamination is nontrivial but not extreme enough to invalidate the entire model. OLS remains the baseline for clean data and very mild contamination, while the tuned $L_p$ method gives the best balance of coefficient recovery, prediction error, and computational efficiency in the studied outlier regimes.
+Overall, the repository supports a clear practical conclusion: smoothed $L_p$ regression is a strong robust alternative for contaminated linear data, especially when contamination is nontrivial but not extreme enough to invalidate the entire model. OLS remains the baseline for clean data and very mild contamination, while the tuned $L_p$ method gives the best balance of coefficient recovery, prediction error, and computational efficiency in the studied outlier regimes when compared to OLS or LAD.
