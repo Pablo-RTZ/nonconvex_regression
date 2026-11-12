@@ -439,7 +439,7 @@ noise and, with probability $\rho$, a Gaussian contamination perturbation with
 standard deviation $A$. After a preliminary robust fit, the residual
 distribution is therefore approximated by the zero-mean scale mixture
 \[
-  f(r) = (1-\rho)\,\mathcal{N}(r;0,\sigma^2)
+  f(r) \approx (1-\rho)\,\mathcal{N}(r;0,\sigma^2)
        + \rho\,\mathcal{N}(r;0,\sigma^2+A^2).
 \]
 The two component means are fixed at zero to reflect the symmetric
@@ -452,33 +452,39 @@ $\hat{A}=\sqrt{\max(0,\hat{\sigma}_{\mathrm{broad}}^2-
 The preliminary coefficients are fitted by Huber regression. Its threshold is
 adaptively set to $1.345$ times a median-absolute-deviation estimate of the
 residual scale, and the scale and fit are updated four times at most. The
-Huber residuals are then used for the mixture fit. The estimated pair
-$(\hat{\rho},\hat{A})$ is assigned to the nearest point in a $3\times3$ oracle
-grid, using normalized distance in $\rho$ and log $A$. For this experiment the
+Huber residuals are then used for the mixture fit. Rather than quantizing the
+estimated pair $(\hat{\rho},\hat{A})$ to the nearest grid point, we use it as
+a continuous input to bilinearly interpolate the oracle settings. The map is
+interpolated linearly in $\rho$ and $\log A$; $p$ is interpolated directly,
+while the positive parameters $\delta$ and $\tau$ are interpolated in log
+space. Estimates outside the calibrated range are clipped to its boundary.
+For comparison, we also evaluate a nearest-grid lookup. The $3\times3$ oracle
 grid has $\rho\in\{0.20,0.25,0.30\}$ and $A\in\{5,10,20\}$.
 
 At each grid point, a candidate-set oracle map is constructed by evaluating
 15 settings sampled from the H1 Bayesian-optimization evaluations. The setting
 with the lowest mean coefficient-recovery error over 20 independently seeded
 tuning samples is retained for that regime. The evaluation uses a separate 100
-samples per regime and compares four procedures: adaptive Huber; $L_p$-IRLS
-selected by the estimated regime; the candidate-set map queried with the true
-regime; and the fixed H1 anchor setting. The true-regime map is an oracle
-reference, not a deployable method, because its construction uses the known
-generating coefficients to score candidates. All methods are evaluated by
+samples per regime and compares five procedures: adaptive Huber; $L_p$-IRLS
+selected by interpolating at the estimated regime; nearest-grid lookup using
+the same estimates; the interpolated map queried with the true regime; and the
+fixed H1 anchor setting. The true-regime interpolation is an oracle reference,
+not a deployable method, because its construction uses the known generating
+coefficients to score candidates. All methods are evaluated by
 $\|\hat{\boldsymbol{\beta}}-\boldsymbol{\beta}\|_2$.
 
 The mixture estimates were close to the generating values over the 900
 evaluation samples: the mean absolute error in $\hat{\rho}$ was $0.0111$, the
 mean relative absolute error in $\hat{A}$ was $3.86\%$, and the mean estimate
-of $\sigma$ was $0.01001$ (the generating value is $0.01$). The nearest-grid
-lookup selected the exact generating grid point in $94.8\%$ of samples.
+of $\sigma$ was $0.01001$ (the generating value is $0.01$). Nearest-grid lookup
+selected the exact generating grid point in $94.8\%$ of samples.
 Table~\ref{tab:h5-results} reports pooled recovery errors across all nine
-regimes. Estimated-regime lookup was close to the true-regime candidate map,
-but the fixed H1 setting had the lowest pooled mean in this experiment.
-Consequently, these results support accurate regime estimation and lookup,
-but do not show that the extra estimation-and-lookup stage improves on reusing
-the H1 anchor under this particular range of regimes.
+regimes. Continuous use of the estimated pair reduced mean error by about 4.0\%
+relative to nearest-grid lookup and was close to the true-regime interpolated
+reference. This is consistent with avoiding quantization of the estimates.
+However, the fixed H1 setting still had the lowest pooled mean error, so the
+experiment does not show that regime estimation improves on reusing that
+anchor for these particular regimes.
 
 \begin{table}[H]
   \centering
@@ -492,8 +498,9 @@ the H1 anchor under this particular range of regimes.
     Method & Mean error & Standard deviation \\
     \midrule
     Adaptive Huber & $6.718\times10^{-4}$ & $3.672\times10^{-4}$ \\
-    Estimated-regime $L_p$ & $4.965\times10^{-4}$ & $2.583\times10^{-4}$ \\
-    True-regime candidate map & $4.981\times10^{-4}$ & $2.579\times10^{-4}$ \\
+    Estimated, interpolated $L_p$ & $4.766\times10^{-4}$ & $2.426\times10^{-4}$ \\
+    Estimated, nearest-grid $L_p$ & $4.965\times10^{-4}$ & $2.583\times10^{-4}$ \\
+    True-regime interpolated $L_p$ & $4.981\times10^{-4}$ & $2.579\times10^{-4}$ \\
     H1 anchor $L_p$ & $4.464\times10^{-4}$ & $2.280\times10^{-4}$ \\
     \bottomrule
   \end{tabular}
@@ -519,8 +526,8 @@ assumed to transfer to other outlier distributions without further testing.
   true contamination proportion and added-noise scale; points show means and
   error bars show $\pm1$ standard deviation across replicates. The final panel
   compares coefficient-recovery errors for adaptive Huber, estimated-regime
-  lookup, the true-regime candidate map, and the fixed H1 anchor over all nine
-  regimes.}
+  continuous interpolation, estimated-regime nearest-grid lookup, true-regime
+  interpolation, and the fixed H1 anchor over all nine regimes.}
   \label{fig:h5-results}
 \end{figure}
 

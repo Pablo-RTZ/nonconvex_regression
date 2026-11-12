@@ -36,7 +36,9 @@ DEFAULT_GP_LENGTH_SCALE = 0.25
 DEFAULT_GP_JITTER = 1e-8
 DEFAULT_MIN_GP_VARIANCE = 1e-12
 DEFAULT_IRLS_MAXITER = 200
-DEFAULT_RESULTS_PATH = Path(__file__).resolve().parents[1] / "Results" / "h1_comparison.csv"
+DEFAULT_RESULTS_PATH = (
+    Path(__file__).resolve().parents[1] / "Results" / "h1_comparison.csv"
+)
 
 
 CSV_COLUMNS = (

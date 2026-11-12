@@ -35,8 +35,7 @@ def read_h2_results(csv_path: Path) -> dict[str, dict[int, float]]:
         missing = REQUIRED_COLUMNS - set(reader.fieldnames or ())
         if missing:
             raise ValueError(
-                f"{csv_path} is missing required columns: "
-                f"{', '.join(sorted(missing))}"
+                f"{csv_path} is missing required columns: {', '.join(sorted(missing))}"
             )
 
         for line_number, row in enumerate(reader, start=2):
@@ -69,7 +68,9 @@ def read_h2_results(csv_path: Path) -> dict[str, dict[int, float]]:
         raise ValueError(f"{csv_path} must contain results for OLS, Huber, and Lp.")
     replicate_ids = set(errors["OLS"])
     if any(set(method_errors) != replicate_ids for method_errors in errors.values()):
-        raise ValueError(f"{csv_path} must contain the same replicates for all methods.")
+        raise ValueError(
+            f"{csv_path} must contain the same replicates for all methods."
+        )
     return errors
 
 
@@ -92,7 +93,9 @@ def plot_h2_comparison(csv_path: Path) -> plt.Figure:
         tolerance = float(first_row["lp_tolerance"])
         huber_delta = float(first_row["huber_delta"])
     except (KeyError, ValueError) as error:
-        raise ValueError(f"{csv_path} contains invalid comparison parameters.") from error
+        raise ValueError(
+            f"{csv_path} contains invalid comparison parameters."
+        ) from error
     if not np.all(np.isfinite([p, lp_delta, tolerance, huber_delta])):
         raise ValueError(f"{csv_path} contains non-finite comparison parameters.")
     if min(lp_delta, tolerance, huber_delta) <= 0.0:

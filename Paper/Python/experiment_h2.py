@@ -16,11 +16,13 @@ if __package__:
         DEFAULT_OBSERVATIONS,
         DEFAULT_OUTLIER_PROPORTION,
         DEFAULT_OUTLIER_SCALE,
-        DEFAULT_RESULTS_PATH as DEFAULT_PARAMETER_PATH,
         DEFAULT_SEED,
         DEFAULT_SIGMA,
         DEFAULT_X_MAX,
         DEFAULT_X_MIN,
+    )
+    from .experiment_h1 import (
+        DEFAULT_RESULTS_PATH as DEFAULT_PARAMETER_PATH,
     )
     from .solvers import huber_irls, lp_irls, ols
 else:
@@ -31,11 +33,13 @@ else:
         DEFAULT_OBSERVATIONS,
         DEFAULT_OUTLIER_PROPORTION,
         DEFAULT_OUTLIER_SCALE,
-        DEFAULT_RESULTS_PATH as DEFAULT_PARAMETER_PATH,
         DEFAULT_SEED,
         DEFAULT_SIGMA,
         DEFAULT_X_MAX,
         DEFAULT_X_MIN,
+    )
+    from experiment_h1 import (
+        DEFAULT_RESULTS_PATH as DEFAULT_PARAMETER_PATH,
     )
     from solvers import huber_irls, lp_irls, ols
 
@@ -76,9 +80,7 @@ def load_best_lp_parameters(parameters_path: Path) -> tuple[float, float, float]
                 f"{', '.join(sorted(missing))}"
             )
         best_rows = [
-            row
-            for row in reader
-            if (row["is_best"] or "").strip().lower() == "true"
+            row for row in reader if (row["is_best"] or "").strip().lower() == "true"
         ]
 
     if len(best_rows) != 1:

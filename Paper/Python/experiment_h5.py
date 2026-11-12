@@ -14,10 +14,12 @@ if __package__:
         DEFAULT_BETA,
         DEFAULT_IRLS_MAXITER,
         DEFAULT_OBSERVATIONS,
-        DEFAULT_RESULTS_PATH as DEFAULT_PARAMETER_PATH,
         DEFAULT_SIGMA,
         DEFAULT_X_MAX,
         DEFAULT_X_MIN,
+    )
+    from .experiment_h1 import (
+        DEFAULT_RESULTS_PATH as DEFAULT_PARAMETER_PATH,
     )
     from .experiment_h2 import load_best_lp_parameters
     from .solvers import huber_irls, lp_irls, ols
@@ -27,10 +29,12 @@ else:
         DEFAULT_BETA,
         DEFAULT_IRLS_MAXITER,
         DEFAULT_OBSERVATIONS,
-        DEFAULT_RESULTS_PATH as DEFAULT_PARAMETER_PATH,
         DEFAULT_SIGMA,
         DEFAULT_X_MAX,
         DEFAULT_X_MIN,
+    )
+    from experiment_h1 import (
+        DEFAULT_RESULTS_PATH as DEFAULT_PARAMETER_PATH,
     )
     from experiment_h2 import load_best_lp_parameters
     from solvers import huber_irls, lp_irls, ols
@@ -137,9 +141,7 @@ def load_h1_candidates(
 
     best = next((row[:3] for row in rows if row[3]), unique[0])
     remaining = [candidate for candidate in unique if candidate != best]
-    selection = np.linspace(
-        0, len(remaining) - 1, candidate_limit - 1, dtype=int
-    )
+    selection = np.linspace(0, len(remaining) - 1, candidate_limit - 1, dtype=int)
     candidates = [best]
     candidates.extend(remaining[index] for index in selection)
     return tuple(dict.fromkeys(candidates))
@@ -218,9 +220,10 @@ def fit_zero_mean_gaussian_mixture(
 
         component_counts = np.sum(responsibilities, axis=0)
         next_weights = component_counts / values.size
-        next_variances = np.sum(
-            responsibilities * np.square(values[:, None]), axis=0
-        ) / component_counts
+        next_variances = (
+            np.sum(responsibilities * np.square(values[:, None]), axis=0)
+            / component_counts
+        )
         next_variances = np.maximum(next_variances, variance_floor)
         if next_variances[0] > next_variances[1]:
             next_variances = next_variances[::-1]
@@ -263,6 +266,81 @@ def _nearest_regime(
     return regimes[int(np.argmin(distances))]
 
 
+def _interpolate_oracle_parameters(
+    proportion: float,
+    scale: float,
+    proportions: tuple[float, ...],
+    scales: tuple[float, ...],
+    oracle_settings: dict[tuple[float, float], tuple[float, float, float]],
+) -> tuple[float, float, float]:
+    """Interpolate oracle settings at a continuous contamination estimate.
+
+    Interpolation is linear in proportion and log scale. The positive-valued
+    smoothing and stopping parameters are interpolated in log space. Estimates
+    outside the calibrated grid are clipped to its boundary.
+    """
+    proportion_values = np.asarray(sorted(proportions), dtype=float)
+    scale_values = np.asarray(sorted(scales), dtype=float)
+    log_scale_values = np.log(scale_values)
+    if proportion_values.size < 2 or log_scale_values.size < 2:
+        raise ValueError("Oracle interpolation requires at least a 2-by-2 grid.")
+
+    clipped_proportion = float(
+        np.clip(proportion, proportion_values[0], proportion_values[-1])
+    )
+    clipped_log_scale = float(
+        np.clip(
+            np.log(max(scale, np.finfo(float).tiny)),
+            log_scale_values[0],
+            log_scale_values[-1],
+        )
+    )
+
+    def bracket(values: np.ndarray, target: float) -> tuple[int, int, float]:
+        lower = int(
+            np.clip(
+                np.searchsorted(values, target, side="right") - 1,
+                0,
+                len(values) - 2,
+            )
+        )
+        upper = lower + 1
+        fraction = (target - values[lower]) / (values[upper] - values[lower])
+        return lower, upper, float(fraction)
+
+    rho_low, rho_high, rho_fraction = bracket(proportion_values, clipped_proportion)
+    scale_low, scale_high, scale_fraction = bracket(log_scale_values, clipped_log_scale)
+    corners = (
+        (proportion_values[rho_low], scale_values[scale_low]),
+        (proportion_values[rho_high], scale_values[scale_low]),
+        (proportion_values[rho_low], scale_values[scale_high]),
+        (proportion_values[rho_high], scale_values[scale_high]),
+    )
+    weights = (
+        (1.0 - rho_fraction) * (1.0 - scale_fraction),
+        rho_fraction * (1.0 - scale_fraction),
+        (1.0 - rho_fraction) * scale_fraction,
+        rho_fraction * scale_fraction,
+    )
+    corner_parameters = [oracle_settings[corner] for corner in corners]
+    interpolated_p = sum(
+        weight * parameters[0] for weight, parameters in zip(weights, corner_parameters, strict=True)
+    )
+    interpolated_log_delta = sum(
+        weight * np.log(parameters[1])
+        for weight, parameters in zip(weights, corner_parameters, strict=True)
+    )
+    interpolated_log_tolerance = sum(
+        weight * np.log(parameters[2])
+        for weight, parameters in zip(weights, corner_parameters, strict=True)
+    )
+    return (
+        float(interpolated_p),
+        float(np.exp(interpolated_log_delta)),
+        float(np.exp(interpolated_log_tolerance)),
+    )
+
+
 def run_h5_experiment(
     output_path: Path = DEFAULT_RESULTS_PATH,
     *,
@@ -284,9 +362,7 @@ def run_h5_experiment(
     proportions = DEFAULT_PROPORTIONS
     scales = DEFAULT_OUTLIER_SCALES
     regimes = tuple(
-        (proportion, scale)
-        for proportion in proportions
-        for scale in scales
+        (proportion, scale) for proportion in proportions for scale in scales
     )
     true_coefficients = np.asarray(DEFAULT_BETA, dtype=float)
     oracle_records: list[dict[str, int | float]] = []
@@ -357,7 +433,11 @@ def run_h5_experiment(
     oracle_path = Path(oracle_path)
     oracle_path.parent.mkdir(parents=True, exist_ok=True)
     with oracle_path.open("w", newline="", encoding="utf-8") as csv_file:
-        writer = csv.DictWriter(csv_file, fieldnames=ORACLE_COLUMNS)
+        writer = csv.DictWriter(
+            csv_file,
+            fieldnames=ORACLE_COLUMNS,
+            lineterminator="\n",
+        )
         writer.writeheader()
         writer.writerows(oracle_records)
 
@@ -386,31 +466,57 @@ def run_h5_experiment(
             lookup_regime = _nearest_regime(
                 estimated_proportion, estimated_scale, regimes
             )
-            lookup_parameters = oracle_settings[lookup_regime]
+            estimated_parameters = _interpolate_oracle_parameters(
+                estimated_proportion,
+                estimated_scale,
+                proportions,
+                scales,
+                oracle_settings,
+            )
+            true_parameters = _interpolate_oracle_parameters(
+                proportion,
+                scale,
+                proportions,
+                scales,
+                oracle_settings,
+            )
+            nearest_parameters = oracle_settings[lookup_regime]
             estimates = (
                 ("Huber", huber_coefficients, None, None),
                 (
-                    "Lp_estimated_regime",
+                    "Lp_estimated_regime_interpolated",
                     lp_irls(
                         X,
                         y,
-                        *lookup_parameters[:2],
+                        *estimated_parameters[:2],
                         maxiter=maxiter,
-                        tolerance=lookup_parameters[2],
+                        tolerance=estimated_parameters[2],
                     ),
-                    lookup_parameters,
+                    estimated_parameters,
+                    (estimated_proportion, estimated_scale),
+                ),
+                (
+                    "Lp_estimated_regime_nearest",
+                    lp_irls(
+                        X,
+                        y,
+                        *nearest_parameters[:2],
+                        maxiter=maxiter,
+                        tolerance=nearest_parameters[2],
+                    ),
+                    nearest_parameters,
                     lookup_regime,
                 ),
                 (
-                    "Lp_true_regime_oracle",
+                    "Lp_true_regime_interpolated",
                     lp_irls(
                         X,
                         y,
-                        *oracle_parameters[:2],
+                        *true_parameters[:2],
                         maxiter=maxiter,
-                        tolerance=oracle_parameters[2],
+                        tolerance=true_parameters[2],
                     ),
-                    oracle_parameters,
+                    true_parameters,
                     (proportion, scale),
                 ),
                 (
@@ -434,10 +540,10 @@ def run_h5_experiment(
                         f"replicate {replicate + 1}."
                     )
                 lp_p, lp_delta, lp_tolerance = (
-                    parameters if parameters is not None else ("", "", "")
+                    parameters if parameters is not None else ("NA", "NA", "NA")
                 )
                 lookup_proportion, lookup_scale = (
-                    selected_regime if selected_regime is not None else ("", "")
+                    selected_regime if selected_regime is not None else ("NA", "NA")
                 )
                 records.append(
                     {
@@ -460,7 +566,7 @@ def run_h5_experiment(
                         "lp_p": lp_p,
                         "lp_delta": lp_delta,
                         "lp_tolerance": lp_tolerance,
-                        "huber_delta": huber_delta if method == "Huber" else "",
+                        "huber_delta": huber_delta if method == "Huber" else "NA",
                         "observations": DEFAULT_OBSERVATIONS,
                         "sigma": DEFAULT_SIGMA,
                     }
@@ -469,7 +575,11 @@ def run_h5_experiment(
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open("w", newline="", encoding="utf-8") as csv_file:
-        writer = csv.DictWriter(csv_file, fieldnames=RESULT_COLUMNS)
+        writer = csv.DictWriter(
+            csv_file,
+            fieldnames=RESULT_COLUMNS,
+            lineterminator="\n",
+        )
         writer.writeheader()
         writer.writerows(records)
     return output_path, oracle_path
@@ -483,9 +593,7 @@ def main() -> None:
     parser.add_argument(
         "--oracle-replicates", type=int, default=DEFAULT_ORACLE_REPLICATES
     )
-    parser.add_argument(
-        "--candidate-limit", type=int, default=DEFAULT_CANDIDATE_LIMIT
-    )
+    parser.add_argument("--candidate-limit", type=int, default=DEFAULT_CANDIDATE_LIMIT)
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED)
     parser.add_argument("--maxiter", type=int, default=DEFAULT_IRLS_MAXITER)
     parser.add_argument("--output", type=Path, default=DEFAULT_RESULTS_PATH)

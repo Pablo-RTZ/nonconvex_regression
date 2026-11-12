@@ -31,6 +31,8 @@ REQUIRED_COLUMNS = {
     "outlier_proportion",
     "outlier_scale",
 }
+
+
 def _read_h3_results(
     csv_path: Path,
 ) -> tuple[dict[tuple[float, float], dict[int, float]], dict[str, float]]:
@@ -53,8 +55,7 @@ def _read_h3_results(
         missing = REQUIRED_COLUMNS - set(reader.fieldnames or ())
         if missing:
             raise ValueError(
-                f"{csv_path} is missing required columns: "
-                f"{', '.join(sorted(missing))}"
+                f"{csv_path} is missing required columns: {', '.join(sorted(missing))}"
             )
 
         for line_number, row in enumerate(reader, start=2):
@@ -159,8 +160,7 @@ def plot_h3_recovery(csv_path: Path) -> plt.Figure:
     reference_column = intercepts.index(reference[0])
     mean_error_deviation = mean_errors - mean_errors[reference_row, reference_column]
     standard_deviation_change = (
-        standard_deviations
-        - standard_deviations[reference_row, reference_column]
+        standard_deviations - standard_deviations[reference_row, reference_column]
     )
     figure, axes = plt.subplots(
         1, 2, figsize=(11, 5), layout="constrained", sharex=True, sharey=True

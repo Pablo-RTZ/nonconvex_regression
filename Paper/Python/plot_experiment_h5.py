@@ -17,14 +17,16 @@ DEFAULT_OUTPUT_PATH = (
 )
 METHODS = (
     "Huber",
-    "Lp_estimated_regime",
-    "Lp_true_regime_oracle",
+    "Lp_estimated_regime_interpolated",
+    "Lp_estimated_regime_nearest",
+    "Lp_true_regime_interpolated",
     "Lp_H1_anchor",
 )
 METHOD_LABELS = (
-    "Adaptive Huber",
-    "Estimated-regime $L_p$",
-    "True-regime oracle $L_p$",
+    "Huber",
+    "Est. interpolated $L_p$",
+    "Est. nearest-grid $L_p$",
+    "True-regime $L_p$",
     "H1 anchor $L_p$",
 )
 REQUIRED_COLUMNS = {
@@ -50,8 +52,7 @@ def _read_results(
         missing = REQUIRED_COLUMNS - set(reader.fieldnames or ())
         if missing:
             raise ValueError(
-                f"{csv_path} is missing required columns: "
-                f"{', '.join(sorted(missing))}"
+                f"{csv_path} is missing required columns: {', '.join(sorted(missing))}"
             )
         for line_number, row in enumerate(reader, start=2):
             method = row["method"]
@@ -108,9 +109,9 @@ def plot_h5_results(csv_path: Path) -> plt.Figure:
     """Plot estimated-versus-true contamination and recovery-error distributions."""
     records, _, _ = _read_results(csv_path)
     estimates = records["Huber"]
-    figure, axes = plt.subplots(
-        1, 3, figsize=(13, 4.5), layout="constrained"
-    )
+    figure, axes = plt.subplots(1, 3, figsize=(13, 4.5), layout="constrained")
+
+    grayscale = plt.get_cmap("Greys")(np.linspace(0.35, 0.85, 5))
 
     for axis, actual_name, estimate_name, label in (
         (
@@ -131,11 +132,7 @@ def plot_h5_results(csv_path: Path) -> plt.Figure:
         standard_deviations = []
         for actual in actual_values:
             sample = np.asarray(
-                [
-                    row[estimate_name]
-                    for row in estimates
-                    if row[actual_name] == actual
-                ]
+                [row[estimate_name] for row in estimates if row[actual_name] == actual]
             )
             means.append(float(np.mean(sample)))
             standard_deviations.append(
@@ -146,35 +143,48 @@ def plot_h5_results(csv_path: Path) -> plt.Figure:
             means,
             yerr=standard_deviations,
             marker="o",
+            markerfacecolor="white",
+            markeredgecolor="black",
+            color="black",
+            ecolor="black",
+            linewidth=1.1,
             capsize=3,
             label="Estimated mean $\\pm$ SD",
         )
         lower = min(actual_values[0], min(means))
         upper = max(actual_values[-1], max(means))
-        axis.plot([lower, upper], [lower, upper], linestyle="--", color="0.4")
+        axis.plot([lower, upper], [lower, upper], linestyle="--", color="0.45")
         axis.set_xlabel(f"True {label}")
         axis.set_ylabel(f"Estimated {label}")
         axis.set_title(f"Mixture estimate of {label}")
-        axis.grid(alpha=0.25)
+        axis.grid(color="0.8", linewidth=0.5, alpha=0.6)
         if actual_name == "outlier_scale":
             axis.set_xscale("log")
             axis.set_yscale("log")
+            axis.grid(which="major", color="0.8", linewidth=0.5, alpha=0.6)
+            axis.grid(which="minor", color="0.8", linewidth=0.4, alpha=0.5)
 
     error_values = [
-        [row["recovery_error"] for row in records[method]]
-        for method in METHODS
+        [row["recovery_error"] for row in records[method]] for method in METHODS
     ]
-    axes[2].boxplot(
+    box = axes[2].boxplot(
         error_values,
         tick_labels=METHOD_LABELS,
         showfliers=False,
         patch_artist=True,
+        boxprops={"edgecolor": "black"},
+        whiskerprops={"color": "black"},
+        capprops={"color": "black"},
+        medianprops={"color": "black"},
     )
+    for patch, shade in zip(box["boxes"], grayscale):
+        patch.set_facecolor(shade)
+        patch.set_edgecolor("black")
     axes[2].set_yscale("log")
     axes[2].set_ylabel(r"Coefficient-recovery error $\|\hat{\beta}-\beta\|_2$")
     axes[2].set_title("Recovery across all regimes")
-    axes[2].tick_params(axis="x", labelrotation=25)
-    axes[2].grid(axis="y", alpha=0.25)
+    axes[2].tick_params(axis="x", labelrotation=25, labelsize=8)
+    axes[2].grid(axis="y", color="0.8", linewidth=0.5, alpha=0.6)
     figure.suptitle("H5: Gaussian-mixture regime estimation and parameter lookup")
     return figure
 

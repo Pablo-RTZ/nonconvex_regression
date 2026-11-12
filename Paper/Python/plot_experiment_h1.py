@@ -11,7 +11,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.lines import Line2D
 
-DEFAULT_RESULTS_PATH = Path(__file__).resolve().parents[1] / "Results" / "h1_comparison.csv"
+DEFAULT_RESULTS_PATH = (
+    Path(__file__).resolve().parents[1] / "Results" / "h1_comparison.csv"
+)
 DEFAULT_OUTPUT_PATH = (
     Path(__file__).resolve().parents[1] / "Assets" / "h1_comparison.png"
 )
@@ -182,9 +184,7 @@ def plot_bo_tuning(csv_path: Path) -> plt.Figure:
         low = float(np.min(values))
         high = float(np.max(values))
         transformed[parameter] = (
-            np.full(values.shape, 0.5)
-            if high == low
-            else (values - low) / (high - low)
+            np.full(values.shape, 0.5) if high == low else (values - low) / (high - low)
         )
 
     coordinates = np.arange(len(parameters))
@@ -232,9 +232,7 @@ def plot_bo_tuning(csv_path: Path) -> plt.Figure:
         high = float(np.max(axis_values))
         tick_positions = (0.0, 0.5, 1.0)
         tick_values = (
-            (low, (low + high) / 2.0, high)
-            if high != low
-            else (low, low, low)
+            (low, (low + high) / 2.0, high) if high != low else (low, low, low)
         )
         parameter_axis.axvline(x_position, color="black", linewidth=1.0, zorder=0)
         for y_position, tick_value in zip(tick_positions, tick_values, strict=True):

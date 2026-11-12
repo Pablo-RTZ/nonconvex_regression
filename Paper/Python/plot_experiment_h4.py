@@ -54,8 +54,7 @@ def _read_h4_results(
         missing = REQUIRED_COLUMNS - set(reader.fieldnames or ())
         if missing:
             raise ValueError(
-                f"{csv_path} is missing required columns: "
-                f"{', '.join(sorted(missing))}"
+                f"{csv_path} is missing required columns: {', '.join(sorted(missing))}"
             )
 
         for line_number, row in enumerate(reader, start=2):
@@ -190,22 +189,19 @@ def plot_h4_recovery(csv_path: Path) -> plt.Figure:
                 len(amplitudes) - 2,
             )
         )
-        proportion_fraction = (
-            reference_proportion - proportions[proportion_index]
-        ) / (proportions[proportion_index + 1] - proportions[proportion_index])
-        amplitude_fraction = (
-            reference_amplitude - amplitudes[amplitude_index]
-        ) / (amplitudes[amplitude_index + 1] - amplitudes[amplitude_index])
+        proportion_fraction = (reference_proportion - proportions[proportion_index]) / (
+            proportions[proportion_index + 1] - proportions[proportion_index]
+        )
+        amplitude_fraction = (reference_amplitude - amplitudes[amplitude_index]) / (
+            amplitudes[amplitude_index + 1] - amplitudes[amplitude_index]
+        )
         lower = (
-            values[amplitude_index, proportion_index]
-            * (1.0 - proportion_fraction)
+            values[amplitude_index, proportion_index] * (1.0 - proportion_fraction)
             + values[amplitude_index, proportion_index + 1] * proportion_fraction
         )
         upper = (
-            values[amplitude_index + 1, proportion_index]
-            * (1.0 - proportion_fraction)
-            + values[amplitude_index + 1, proportion_index + 1]
-            * proportion_fraction
+            values[amplitude_index + 1, proportion_index] * (1.0 - proportion_fraction)
+            + values[amplitude_index + 1, proportion_index + 1] * proportion_fraction
         )
         return float(lower * (1.0 - amplitude_fraction) + upper * amplitude_fraction)
 
